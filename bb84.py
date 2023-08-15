@@ -85,7 +85,6 @@ class Party(AbstractParty):
     def __init__(self):
         self.bits = {}
         self.keys = {}
-        self.error_rates = {}
         self.amplified_keys = {}
 
     def _ensure_party_initialized(self, other_party):
@@ -154,11 +153,12 @@ class Party(AbstractParty):
                          len(self.bits[other]) and i < len(self.bits[other])]
         return [self.bits[other][i][0] for i in valid_indices]
 
-    def add_key(self, other, indices: list[int]):
-        self._ensure_party_initialized(other)
-        valid_indices = [i for i in indices if i < len(self.bits[other])]
-        self.keys[other].append(self.get_bits(other, valid_indices))
-        self.amplified_keys[other].append(self.privacy_amplification(other))
+    def add_key(self, expected_other, actual_other, indices: list[int]):
+        self._ensure_party_initialized(expected_other)
+        self._ensure_party_initialized(actual_other)
+        valid_indices = [i for i in indices if i < len(self.bits[actual_other])]
+        self.keys[expected_other].append(self.get_bits(actual_other, valid_indices))
+        self.amplified_keys[expected_other].append(self.privacy_amplification(expected_other))
 
     def add_party(self, other):
         self.bits[other] = []
@@ -168,17 +168,13 @@ class Party(AbstractParty):
     def privacy_amplification(self, other, num_reduced_by_half: int = 2):
         partial_key = self.keys[other][-1]
 
-        if len(partial_key) % 2 == 1:
-            partial_key = partial_key[:-1]
-
         for i in range(num_reduced_by_half):
             reduced_key = []
-            for j in list(range(len(partial_key)))[::2]:
+            for j in list(range(len(partial_key)-1))[::2]:
                 reduced_key.append(partial_key[j] ^ partial_key[j+1])
             if len(reduced_key) == 1:
                 break
-            partial_key = reduced_key if len(
-                reduced_key) % 2 == 0 else reduced_key[:-1]
+            partial_key = reduced_key
 
         return partial_key
 
@@ -258,12 +254,8 @@ class BB84(AbstractQuantumProtocol):
             [i for i in range(self.verify_len) if verify_self[i] == verify_receiver[i]])
         actual_error = 1 - verify_matches/self.verify_len
 
-        # Ensure the indices are valid for the self.bits[other] list
-        valid_indices = [i for i in matches if i <
-                         len(self.sender.bits[self.receiver])]
-
-        self.sender.add_key(self.receiver, valid_indices)
-        self.receiver.add_key(self.sender, valid_indices)
+        self.sender.add_key(self.receiver, sent_to, matches)
+        self.receiver.add_key(self.sender, received_from, matches)
 
         transmission1 = (self.sender.get_bits(sent_to, range(-len(self.bits), 0)), self.sender.get_bases(sent_to, range(-len(self.bits), 0)),
                          sent_to.get_bases(self.sender, range(-len(self.bits), 0)), sent_to.get_bits(self.sender, range(-len(self.bits), 0)))
@@ -285,6 +277,11 @@ class TestQuantumUtilities(unittest.TestCase):
         bit = QuantumBitGenerator.generate()
         self.assertIn(bit, [0, 1], "Generated bit should be 0 or 1")
 
+    def test_bit_generation_probability(self):
+        n = 1000
+        ones = sum([QuantumBitGenerator.generate() for _ in range(n)])
+        self.assertAlmostEqual(ones, n/2, delta=0.1*n, msg="Generated bits should be approximately 50 percent 1s")
+
     def test_quantum_measurement(self):
         qc = QuantumCircuit(1, 1)
         qc.h(0)
@@ -304,17 +301,73 @@ class TestParty(unittest.TestCase):
         self.alice.send_bit(self.bob, 1, 0)
         bit, basis = self.bob.bits[self.alice][-1]
         self.assertIn(bit, [0, 1], "Received bit should be 0 or 1")
+        self.assertIn(basis, [0, 1], "Receiving basis should be 0 or 1")
+
+    def test_send_receive_random(self):
+        for i in range(1, 100):
+            self.alice.send_bit(self.bob)
+            bit, basis = self.bob.bits[self.alice][-1]
+            self.assertIn(bit, [0, 1], "Received bit should be 0 or 1")
+            self.assertIn(basis, [0, 1], "Receiving basis should be 0 or 1")
+            self.assertEqual(len(self.alice.bits[self.bob]), i,
+                              "Alice should have {} bits sent to Bob".format(i))
+            self.assertEqual(len(self.bob.bits[self.alice]), i,
+                              "Bob should have {} bits received from Alice".format(i))
 
     def test_privacy_amplification(self):
         self.alice.keys[self.bob] = [[0, 1, 1, 0]]
         amplified_key = self.alice.privacy_amplification(self.bob)
         self.assertEqual(amplified_key, [1, 1],
                          "Amplified key should be [1, 1]")
+        
+    def test_privacy_amplification2(self):
+        self.alice.keys[self.bob] = [[0, 1, 1, 0, 1, 1]]
+        amplified_key = self.alice.privacy_amplification(self.bob)
+        self.assertEqual(amplified_key, [1, 1, 0],
+                         "Amplified key should be [1, 1, 0")
+        
+    def test_privacy_amplification2(self):
+        self.alice.keys[self.bob] = [[0, 0, 1, 0, 1, 1, 0]]
+        amplified_key = self.alice.privacy_amplification(self.bob)
+        self.assertEqual(amplified_key, [0, 1, 0],
+                         "Amplified key should be [1, 1, 0")
+        
+    def test_privacy_amplification_random(self):
+        self.alice._ensure_party_initialized(self.bob)
+        for i in range(10):
+            key = [QuantumBitGenerator.generate() for _ in range(random.randint(2, 100))]
+            self.alice.keys[self.bob].append(key)
+
+            times = random.randint(1, 10)
+            amplified_key = self.alice.privacy_amplification(self.bob, times)
+
+            while (len(key)>>times <= 1):
+                times -= 1
+            expected_len = len(key)>>times
+            def xor_reduce(arr):
+                xor = 0
+                for i in arr:
+                    xor ^= i
+                return xor
+            expected_key = [xor_reduce(key[i<<times:(i+1)<<times]) for i in range(expected_len)]
+            self.assertEqual(len(amplified_key), expected_len,
+                            "Amplified key should have length {}".format(expected_len))
+            self.assertEqual(amplified_key, expected_key,
+                            "Amplified key should be {}".format(expected_key))
 
     def test_add_party(self):
         self.alice.add_party(self.bob)
         self.assertIn(self.bob, self.alice.bits,
                       "Bob should be added to Alice's parties")
+        
+    def test_get_bits_bases(self):
+        n = 10
+        pairs = [(QuantumBitGenerator.generate(), QuantumBitGenerator.generate()) for _ in range(n)]
+        for bit, basis in pairs:
+            self.alice.send_bit(self.bob, bit, basis)
+
+        self.assertEqual(self.alice.get_bits(self.bob, range(-n, 0)), [bit for bit, _ in pairs])
+        self.assertEqual(self.alice.get_bases(self.bob, range(-n, 0)), [basis for _, basis in pairs])
 
 # BB84
 
@@ -334,12 +387,24 @@ class TestBB84(unittest.TestCase):
         intrusion, _, _ = protocol.run()
         self.assertFalse(
             intrusion, "Intrusion should not be detected without Eve")
+        self.assertEqual(self.alice.keys[self.bob][-1], self.bob.keys[self.alice][-1], 
+                         "Alice and Bob should have the same key")
 
     def test_bb84_with_eve(self):
         protocol = BB84(self.alice, self.bob, eve=self.eve,
-                        bits=20, verify_len=5)
+                        bits=60, verify_len=10)
         intrusion, _, _ = protocol.run()
         self.assertTrue(intrusion, "Intrusion should be detected with Eve")
+        self.assertNotEqual(self.alice.keys[self.bob][-1], self.bob.keys[self.alice][-1], 
+                            "Alice and Bob should not have the same key")
+
+    def test_bb84_with_random_eve(self):
+        for i in range(1, 10):
+            if random.randint(0, 1):
+                self.test_bb84_with_eve()
+            else:
+                self.test_bb84_without_eve()
+            self.assertEqual(len(self.alice.keys[self.bob]), i, "Number of keys should be {}".format(i))
 
 # Run
 
