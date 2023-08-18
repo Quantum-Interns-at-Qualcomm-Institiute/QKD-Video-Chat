@@ -20,8 +20,23 @@ def createVideoPage(window):
     outgoingVideo = tk.Label(contentFrame, image=placeholder2, bg="#000023", justify="right", anchor="n")
     outgoingVideo.grid(row=0,column=2,sticky="n")
 
-    incomingVideo = tk.Label(contentFrame, bg="#000023", justify="left", anchor="w")
+    incomingVideo = tk.Label(contentFrame, image=placeholder1, bg="#000023", justify="left", anchor="w")
     incomingVideo.grid(row=0,column=0,sticky="w")
+
+    metricsFrame = tk.Frame(contentFrame, height=100,bg="#000023")
+    metricsFrame.grid(row=0,column=2,sticky="s")
+    metricsFrame.columnconfigure(0,weight=1)
+    metricsFrame.rowconfigure(0,weight=1)
+    metricsFrame.rowconfigure(1,weight=1)
+    metricsFrame.rowconfigure(2,weight=2)
+
+    accumKeyLabel = tk.Label(metricsFrame, text="Accumulated Secret Key", bg="#000023",fg="White", font="Helvetica 12")
+    accumKey = tk.Label(metricsFrame, text="some# Mbits", bg="white",fg="black", font="Helvetica 20")
+    accumKeyLabel.grid(row=0,column=0)
+    accumKey.grid(row=1,column=0,padx=50)
+
+    spaceFiller = tk.Label(metricsFrame,text="k",bg="#000023",fg="#000023",font="Helvetica 150")
+    # spaceFiller.grid(row=2,column=0)
 
     return contentFrame, placeholder1, placeholder2, incomingVideo, outgoingVideo
 
