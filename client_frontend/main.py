@@ -2,6 +2,7 @@ import tkinter as tk
 from components import header
 from pages import createConnectPage, createVideoPage
 from PIL import Image, ImageTk
+import cv2
 
 # class App(Tk):
     
@@ -29,8 +30,28 @@ loadingText = tk.Label(window, text = "Establishing Encryption", font=("Helvetic
 
 image = header.createHeader(window) # ghetto ass way to keep image reference from being garbage collected after function call ends
 
-videoPage, placeholder1, placeholder2 = createVideoPage.createVideoPage(window)
+videoPage, placeholder1, placeholder2, incomingVideo, outgoingVideo = createVideoPage.createVideoPage(window)
 connectPage = createConnectPage.createConnectPage(window, videoPage)
 
+
+
+# Capture from camera
+cap = cv2.VideoCapture(0)
+
+# function for video streaming
+def video_stream():
+    _, frame = cap.read()
+    cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+    img = Image.fromarray(cv2image)
+    imgtk = ImageTk.PhotoImage(image=img)
+    incomingVideo.imgtk = imgtk
+    incomingVideo.configure(image=imgtk)
+    incomingVideo.after(1, video_stream)
+    
+    # outgoingVideo.imgtk = imgtk
+    # outgoingVideo.configure(image=imgtk)
+    # outgoingVideo.after(1, video_stream)
+
 connectPage.grid(row=1,column=0,)
+video_stream()
 window.mainloop()

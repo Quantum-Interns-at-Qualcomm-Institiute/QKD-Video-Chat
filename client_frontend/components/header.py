@@ -24,7 +24,7 @@ def createHeader(window):
 
     ucsdLogo1 = tk.Label(headerFrames[0], image=ucsdlogo, bg="#000023")
     ucsdLogo2 = tk.Label(headerFrames[2], image=ucsdlogo, bg="#000023")
-
+    
     titleText.grid(row=0,column=0,sticky="n")
     ucsdLogo1.grid(row=0,column=0)
     ucsdLogo2.grid(row=0,column=0)
