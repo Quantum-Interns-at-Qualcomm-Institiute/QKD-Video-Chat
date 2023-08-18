@@ -3,6 +3,24 @@ from ConnectionHandler import ConnectionHandler
 from MetricsMonitor import MetricsMonitor
 from EavesdropperDetector import EavesdropperDetector
 
+class SocketHandler:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+    def create_socket(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((self.host, self.port))
+
+    def listen_for_connection(self):
+        self.socket.listen()
+        print("Server is waiting for client connection...")
+        self.conn, self.addr = self.socket.accept()
+        print('Connected by', self.addr)
+
+    def send_connection_code(self, connection_code):
+        self.conn.sendall(connection_code.encode('utf-8'))
+
 class IntegratedServer:
     """
     IntegratedServer class integrates the ConnectionHandler, MetricsMonitor, and 
@@ -13,12 +31,13 @@ class IntegratedServer:
     - is_connected (bool): Indicates if a client is currently connected.
     """
 
-    is_connected = False
-    HOST = '127.0.0.1'
-    PORT = 65432
+    def __init__(self, socket_handler, metrics_monitor, eavesdropper_detector):
+        self.socket_handler = socket_handler
+        self.metrics_monitor = metrics_monitor
+        self.eavesdropper_detector = eavesdropper_detector
 
-    @classmethod
-    def connect(cls, connection_code: str) -> bool:
+    
+    def connect(self, connection_code: str):
         """
         Establishes a connection using the ConnectionHandler.
 
@@ -26,20 +45,14 @@ class IntegratedServer:
         - connection_code (str): The code to use for establishing the connection.
 
         Returns:
-        - bool: True if the connection is successful, False otherwise.
+        - bool: True if the connection is successful, False otherwise. # Actually not rn
         """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((cls.HOST, cls.PORT))
-            s.listen()
-            print("Server is waiting for client connection...")
-            conn, addr = s.accept()
-            with conn:
-                print('Connected by', addr)
-                cls.is_connected = True
-                conn.sendall(connection_code.encode('utf-8'))
+        self.socket_handler.create_socket()
+        self.socket_handler.listen_for_connection()
+        self.socket_handler.send_connection_code(connection_code)
 
-    @classmethod
-    def sendData(cls, data: str):
+    
+    def sendData(self, data: str):
         """
         Sends data and updates the MetricsMonitor with the data volume.
 
@@ -49,8 +62,8 @@ class IntegratedServer:
         ConnectionHandler.sendData(data)
         MetricsMonitor.addDataVolume(len(data))
 
-    @classmethod
-    def runBB84Protocol(cls):
+    
+    def runBB84Protocol(self):
         """
         Executes the BB84 protocol and checks for eavesdropping.
         Updates the MetricsMonitor with the key exchange count.
@@ -60,12 +73,12 @@ class IntegratedServer:
         MetricsMonitor.incrementKeyExchanges()
 
         if EavesdropperDetector.detectEavesdropping():
-            cls.reset()
+            self.reset()
 
-    @classmethod
-    def reset(cls):
+    
+    def reset(self):
         """
         Resets the connection.
         """
         ConnectionHandler.reset()
-        cls.is_connected = False
+        self.is_connected = False

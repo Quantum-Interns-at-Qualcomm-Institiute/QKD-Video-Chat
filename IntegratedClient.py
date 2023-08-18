@@ -11,10 +11,11 @@ class IntegratedClient:
     Attributes:
     None
     """
-    is_connected = Falseserver_address = ('127.0.0.1', 65432)
+    is_connected = False
+    server_address = ('127.0.0.1', 65432)
 
     @classmethod
-    def connect(cls, connection_code: str) -> bool:
+    def connect(cls) -> bool:
         """
         Attempts to establish a connection to the server using the provided connection code.
         If successful, starts the outgoing video stream. If unsuccessful, displays a placeholder.
@@ -25,12 +26,21 @@ class IntegratedClient:
         Returns:
         - bool: True if the connection is successful, False otherwise.
         """
-        success = ConnectionManager.connectToServer(connection_code)
-        if success:
-            VideoStreamHandler.startOutgoingStream()
-        else:
-            VideoStreamHandler.showPlaceholder()
-        return success
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(cls.server_address)
+                cls.is_connected = True
+                cls.connection_code = s.recv(1024).decode('utf-8')
+                print(f"Received Connection Code: {cls.connection_code}")
+            success = ConnectionManager.connectToServer(cls.connection_code)
+            if success:
+                VideoStreamHandler.startOutgoingStream()
+            else:
+                VideoStreamHandler.showPlaceholder()
+            return success
+        except Exception as e:
+            print(f"Connection failed with error: {e}")
+            raise ConnectionError(e)  
 
     @classmethod
     def disconnect(cls):

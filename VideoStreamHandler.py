@@ -1,3 +1,16 @@
+class StreamManager:
+    def startOutgoingStream(cls):
+        cls.outgoing_stream_active = True
+
+    def stopOutgoingStream(cls):
+        cls.outgoing_stream_active = False
+
+    def startIncomingStream(cls):
+        cls.incoming_stream_active = True
+
+    def stopIncomingStream(cls):
+        cls.incoming_stream_active = False
+
 class VideoStreamHandler:
     """
     VideoStreamHandler class manages the outgoing and incoming video streams 

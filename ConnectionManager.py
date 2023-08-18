@@ -1,3 +1,11 @@
+class ConnectionValidator:
+    def validateConnection(cls, connection_code: str) -> bool:
+        if connection_code == "VALID_CODE":
+            return True
+        else:
+            return False
+        
+
 class ConnectionManager:
     """
     ConnectionManager class manages the connection to the server, including 

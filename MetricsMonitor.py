@@ -6,43 +6,40 @@ class MetricsMonitor:
     - data_volume (int): Total volume of data exchanged (in bytes).
     - key_exchanges (int): Count of key exchanges that have occurred.
     """
+    
+    def __init__(self):
+        self.data_volume = 0
+        self.key_exchanges = 0 # Temp in place of actual key rate
 
-    data_volume = 0
-    key_exchanges = 0
-
-    @classmethod
-    def addDataVolume(cls, volume: int):
+    def addDataVolume(self, volume: int):
         """
         Increment the data volume by a specified amount.
 
         Parameters:
         - volume (int): Amount of data (in bytes) to add to the total volume.
         """
-        cls.data_volume += volume
+        self.data_volume += volume
 
-    @classmethod
-    def getDataVolume(cls) -> int:
+    def getDataVolume(self) -> int:
         """
         Retrieve the current total volume of data exchanged.
 
         Returns:
         - int: Total volume of data exchanged.
         """
-        return cls.data_volume
+        return self.data_volume
 
-    @classmethod
-    def incrementKeyExchanges(cls):
+    def incrementKeyExchanges(self):
         """
-        Increment the count of key exchanges by one.
+        Increment the count of key exchanges by one. Temporary for now
         """
-        cls.key_exchanges += 1
+        self.key_exchanges += 1
 
-    @classmethod
-    def getKeyExchangeRate(cls) -> int:
+    def getKeyExchangeRate(self) -> int:
         """
-        Retrieve the current count of key exchanges.
+        Retrieve the speed with which keys are being exchanged
 
         Returns:
-        - int: Count of key exchanges that have occurred.
+        - int: Count for MB/s 
         """
-        return cls.key_exchanges
+        return self.key_exchanges # Temp just returns how MANY exchanges

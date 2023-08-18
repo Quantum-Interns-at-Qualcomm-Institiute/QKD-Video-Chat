@@ -1,6 +1,15 @@
 import string
 import random
 
+class DataTransfer:
+    def sendData(cls, code, data):
+        return code in cls.active_codes
+
+    def receiveData(cls, code):
+        if code in cls.active_codes:
+            return "Hello, Client!"
+        return None
+    
 
 class ConnectionHandler:
     """
