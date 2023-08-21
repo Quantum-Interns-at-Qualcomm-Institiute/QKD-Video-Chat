@@ -1,5 +1,4 @@
-frontend
-frontend/*
+frontend/node_modules
 
 __pycache__
 myenv
