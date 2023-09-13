@@ -13,7 +13,7 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 
-    background-color: var(--darkblue);
+    background-color: grey; /*var(--darkblue);*/
     color: var(--offwhite);
 }
 
