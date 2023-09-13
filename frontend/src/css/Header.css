@@ -17,8 +17,8 @@
     top: 40px;
     left: 40px;
 
-    max-width: 175px;
-    max-height: 175px;
+    /* max-width: 175px; */
+    max-height: 100px;
 }
 
 .header .waveforms {
