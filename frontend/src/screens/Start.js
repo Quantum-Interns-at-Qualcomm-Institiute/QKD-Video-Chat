@@ -22,7 +22,6 @@ export default function Start() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const response = await isValidCode(code);
-        console.log(response)
         if(response.ok) navigate(`/session/${code}`)
         else if (response.message) setError({
             open: true,

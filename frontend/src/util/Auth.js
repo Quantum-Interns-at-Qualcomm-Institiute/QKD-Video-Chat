@@ -13,4 +13,9 @@ async function isValidCode(code) {
     else return {ok: true, message: "Valid code."};
 }
 
-export {isValidCode};
+async function closeSession() {
+    console.log('Closed session');
+    return
+}
+
+export {isValidCode, closeSession};
